@@ -12,6 +12,7 @@ class Peringatan extends Model
         'pegawai_id',
         'jenis_sp',
         'tanggal_kirim',
+        'file_surat_peringatan'
     ];
 
     protected $casts = [

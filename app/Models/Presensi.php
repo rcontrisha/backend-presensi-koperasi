@@ -13,10 +13,12 @@ class Presensi extends Model
 
     protected $fillable = [
         'user_id',
-        'foto',
+        'foto_masuk',
+        'foto_pulang',
         'latitude',
         'longitude',
         'waktu_presensi',
+        'waktu_pulang'
     ];
 
     public function user()

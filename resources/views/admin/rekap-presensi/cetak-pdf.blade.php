@@ -38,12 +38,17 @@
         .info {
             margin-top: 20px;
         }
+        @media print {
+            .no-print {
+                display: none;
+            }
+        }
     </style>
 </head>
-<body>
+<body onload="window.print()">
 
 <div class="header">
-    <img src="{{ public_path('image/dinkop2.png') }}" alt="Logo" class="logo"><br>
+    <img src="{{ asset('image/dinkop2.png') }}" alt="Logo" class="logo"><br>
     <strong>DINAS KOPERASI & UMKM KABUPATEN PACITAN</strong><br>
     <small>Jl. Jaksa Agung Suprapto No.17, Pacitan</small>
 </div>
@@ -53,8 +58,8 @@
 <div class="info">
     <p><strong>Nama:</strong> {{ $user->name }}</p>
     <p><strong>Bulan:</strong> 
-        {{ \Carbon\Carbon::create()->month((int)($request->bulan ?? now()->month))->locale('id')->isoFormat('MMMM') }}
-        {{ $request->tahun ?? now()->year }}
+        {{ \Carbon\Carbon::create()->month((int)($bulan))->locale('id')->isoFormat('MMMM') }}
+        {{ $tahun }}
     </p>
 </div>
 
@@ -82,6 +87,10 @@
         @endforeach
     </tbody>
 </table>
+
+<div class="no-print" style="text-align:center; margin-top: 20px;">
+    <a href="{{ route('admin.rekap-presensi') }}" class="btn btn-secondary">Kembali</a>
+</div>
 
 </body>
 </html>

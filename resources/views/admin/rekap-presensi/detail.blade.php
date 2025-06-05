@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="id">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -11,6 +12,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.0/umd/popper.min.js"></script>
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
 </head>
+
 <body>
     @include('partials.admin-sidebar')
 
@@ -30,8 +32,10 @@
                             @include('partials.current-time')
                             <nav aria-label="breadcrumb" class="breadcrumb-header float-start float-lg-end">
                                 <ol class="breadcrumb">
-                                    <li class="breadcrumb-item"><a href="{{ route('admin.dashboard') }}">Dashboard</a></li>
-                                    <li class="breadcrumb-item"><a href="{{ route('admin.rekap-presensi') }}">Rekap Presensi</a></li>
+                                    <li class="breadcrumb-item"><a href="{{ route('admin.dashboard') }}">Dashboard</a>
+                                    </li>
+                                    <li class="breadcrumb-item"><a href="{{ route('admin.rekap-presensi') }}">Rekap
+                                            Presensi</a></li>
                                     <li class="breadcrumb-item active" aria-current="page">Detail</li>
                                 </ol>
                             </nav>
@@ -46,7 +50,7 @@
                         </div>
                         <div class="card-body">
                             @if (session('status'))
-                                <div class="alert alert-success">{{ session('status') }}</div>
+                            <div class="alert alert-success">{{ session('status') }}</div>
                             @endif
 
                             <div class="d-flex justify-content-between align-items-center mb-3">
@@ -54,24 +58,32 @@
                                     <div class="form-group mr-2">
                                         <label for="bulan" class="mr-2">Bulan</label>
                                         <select name="bulan" id="bulan" class="form-control">
-                                            @for ($i = 1; $i <= 12; $i++)
-                                                <option value="{{ $i }}" {{ request('bulan', now()->month) == $i ? 'selected' : '' }}>{{ \Carbon\Carbon::create()->month($i)->locale('id')->isoFormat('MMMM') }}</option>
-                                            @endfor
+                                            @for ($i = 1; $i <= 12; $i++) <option value="{{ $i }}"
+                                                {{ request('bulan', now()->month) == $i ? 'selected' : '' }}>
+                                                {{ \Carbon\Carbon::create()->month($i)->locale('id')->isoFormat('MMMM') }}
+                                                </option>
+                                                @endfor
                                         </select>
                                     </div>
-                                    
+
                                     <div class="form-group mr-2">
                                         <label for="tahun" class="mr-2">Tahun</label>
                                         <select name="tahun" id="tahun" class="form-control">
                                             @for ($year = now()->year; $year >= now()->year - 5; $year--)
-                                                <option value="{{ $year }}" {{ request('tahun', now()->year) == $year ? 'selected' : '' }}>{{ $year }}</option>
+                                            <option value="{{ $year }}"
+                                                {{ request('tahun', now()->year) == $year ? 'selected' : '' }}>
+                                                {{ $year }}</option>
                                             @endfor
                                         </select>
                                     </div>
                                 </div>
 
-                                <a href="{{ route('admin.rekap-presensi.cetak-pdf', ['id' => $user->id, 'bulan' => request('bulan', now()->month), 'tahun' => request('tahun', now()->year)]) }}" target="_blank" class="btn btn-warning ml-3">
-                                    Cetak PDF
+                                <a href="{{ route('admin.rekap-presensi.print-view', [
+                                        'id' => $user->id,
+                                        'bulan' => request('bulan', now()->month),
+                                        'tahun' => request('tahun', now()->year)
+                                    ]) }}" target="_blank" class="btn btn-warning ml-3" id="btn-cetak">
+                                    Cetak
                                 </a>
                             </div>
 
@@ -93,12 +105,14 @@
     </div>
 
     <script>
-        $(document).ready(function() {
+        const printViewRouteTemplate = "{{ route('admin.rekap-presensi.print-view', ['id' => ':id']) }}";
+
+        $(document).ready(function () {
             // Trigger AJAX on change of 'bulan' or 'tahun' dropdown
-            $('#bulan, #tahun').change(function() {
+            $('#bulan, #tahun').change(function () {
                 var bulan = $('#bulan').val();
                 var tahun = $('#tahun').val();
-                
+
                 // Send AJAX request to get filtered data
                 $.ajax({
                     url: '{{ route("admin.rekap-presensi.detail", $user->id) }}',
@@ -107,27 +121,53 @@
                         bulan: bulan,
                         tahun: tahun
                     },
-                    success: function(response) {
+                    success: function (response) {
                         // Update the table with new data
                         $('#presensi-table-container').html(response);
                     }
                 });
             });
 
-            @foreach ($presensis as $presensi)
-                $.get('https://nominatim.openstreetmap.org/reverse', {
-                    format: 'jsonv2',
-                    lat: '{{ $presensi->latitude }}',
-                    lon: '{{ $presensi->longitude }}'
-                }, function(data) {
-                    $('#alamat-{{ $presensi->id }}').html(data.display_name + '<br><a href="https://www.google.com/maps/search/?api=1&query={{ $presensi->latitude }},{{ $presensi->longitude }}" target="_blank">Lihat di Maps</a>');
-                });
+            @foreach($presensis as $presensi)
+            $.get('https://nominatim.openstreetmap.org/reverse', {
+                format: 'jsonv2',
+                lat: '{{ $presensi->latitude }}',
+                lon: '{{ $presensi->longitude }}'
+            }, function (data) {
+                $('#alamat-{{ $presensi->id }}').html(data.display_name +
+                    '<br><a href="https://www.google.com/maps/search/?api=1&query={{ $presensi->latitude }},{{ $presensi->longitude }}" target="_blank">Lihat di Maps</a>'
+                    );
+            });
             @endforeach
         });
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const bulanSelect = document.getElementById('bulan');
+            const tahunSelect = document.getElementById('tahun');
+            const btnCetak = document.getElementById('btn-cetak');
+            const userId = {{ $user->id }};
+
+            function updateCetakLink() {
+                const bulan = bulanSelect.value;
+                const tahun = tahunSelect.value;
+
+                // Ganti placeholder :id dengan userId
+                let url = printViewRouteTemplate.replace(':id', userId);
+                url += `?bulan=${bulan}&tahun=${tahun}`;
+                btnCetak.href = url;
+            }
+
+            bulanSelect.addEventListener('change', updateCetakLink);
+            tahunSelect.addEventListener('change', updateCetakLink);
+
+            updateCetakLink();
+        });
+
     </script>
-    
+
     <script src="{{ asset('assets/static/js/components/dark.js') }}"></script>
     <script src="{{ asset('assets/extensions/perfect-scrollbar/perfect-scrollbar.min.js') }}"></script>
     <script src="{{ asset('assets/compiled/js/app.js') }}"></script>
 </body>
+
 </html>

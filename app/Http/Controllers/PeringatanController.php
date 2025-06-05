@@ -13,6 +13,9 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use App\Mail\SuratPeringatanMail;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Http;
+use App\Services\FCMServices;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Auth;
 
 class PeringatanController extends Controller
 {
@@ -25,6 +28,31 @@ class PeringatanController extends Controller
         }
 
         return view('admin.peringatan.index', compact('pegawaiList'));
+    }
+
+    public function getSuratPeringatan()
+    {
+        $user = Auth::user();
+        $pegawai = Pegawai::where('user_id', $user->id)->first();
+
+        if (! $pegawai) {
+            return response()->json(['message' => 'Pegawai tidak ditemukan'], 404);
+        }
+
+        // Ambil semua surat peringatan pegawai
+        $peringatan = Peringatan::where('pegawai_id', $pegawai->id)
+            ->orderBy('tanggal_kirim', 'desc')
+            ->get()
+            ->map(function ($item) {
+                return [
+                    'id' => $item->id,
+                    'judul_surat' => 'SURAT PERINGATAN ' . $item->jenis_sp,
+                    'tanggal_kirim' => $item->tanggal_kirim->format('Y-m-d'),
+                    'file_path' => $item->file_surat_peringatan,
+                ];
+            });
+
+        return response()->json($peringatan);
     }
 
     public function kirimSurat($id)
@@ -49,7 +77,6 @@ class PeringatanController extends Controller
             return back()->with('error', 'Pegawai telah menerima SP3. Tidak dapat mengirim lagi.');
         }
 
-        // Ambil isi_surat dari form request
         $isiSurat = request()->input('isi_surat');
 
         $data = [
@@ -57,13 +84,18 @@ class PeringatanController extends Controller
             'nomor_surat' => "{$nextSP}/" . strtoupper(Str::random(5)) . '/' . now()->format('m/Y'),
             'nama' => $pegawai->user->name ?? '-',
             'jabatan' => $pegawai->jabatan,
-            'isi_surat' => $isiSurat, // Gunakan isi surat dari form
+            'isi_surat' => $isiSurat,
             'tanggal' => now()->translatedFormat('d F Y'),
         ];
 
         $pdf = Pdf::loadView('admin.peringatan.peringatan-pdf', $data);
 
-        // Kirim email
+        // Simpan PDF ke storage
+        $namaFile = "Surat_Peringatan_{$nextSP}_" . Str::slug($pegawai->user->name ?? 'pegawai') . ".pdf";
+        $path = "surat_peringatan/{$namaFile}";
+        Storage::disk('public')->put($path, $pdf->output());
+
+        // Kirim email dengan lampiran PDF
         Mail::to($pegawai->user->email)->send(new SuratPeringatanMail($pdf, $data));
 
         // Simpan ke tabel peringatan
@@ -71,9 +103,22 @@ class PeringatanController extends Controller
             'pegawai_id' => $pegawai->id,
             'jenis_sp' => $nextSP,
             'tanggal_kirim' => now()->toDateString(),
+            'file_surat_peringatan' => $path,
         ]);
 
-        return back()->with('success', "Surat {$nextSP} berhasil dikirim ke email pegawai.");
+        // Kirim Push Notification via FCMService
+        $fcmToken = $pegawai->user->fcm_token;
+
+        if ($fcmToken) {
+            $fcm = new FCMServices();
+            $fcm->sendToDevice(
+                $fcmToken,
+                "Surat Peringatan {$nextSP}",
+                "Anda telah menerima Surat Peringatan {$nextSP}. Silakan cek email Anda."
+            );
+        }
+
+        return back()->with('success', "Surat {$nextSP} berhasil dikirim dan disimpan.");
     }
 
     private function getTemplateIsi($jenis_sp, $pegawai)
@@ -124,33 +169,36 @@ class PeringatanController extends Controller
         $tahunIni = now()->format('Y');
         $hariIni = now()->toDateString();
 
+        // 1. Ambil tanggal terakhir SP milik pegawai
+        $tanggalSpTerakhir = Peringatan::where('pegawai_id', $pegawai->id)
+            ->orderByDesc('tanggal_kirim')
+            ->value('tanggal_kirim');
+
+        // 2. Ambil hari kerja sampai hari ini
         $liburNasional = $this->getLiburNasional($bulanIni, $tahunIni);
         [$_, $listHariKerja] = $this->countHariKerja($bulanIni, $tahunIni, $liburNasional);
 
-        $hariKerjaBulanIni = collect($listHariKerja)
-            ->filter(fn($tgl) => $tgl['tanggal'] <= $hariIni)
-            ->pluck('tanggal');
+        // 3. Filter hanya hari kerja setelah tanggal SP terakhir (jika ada)
+        $hariKerjaSetelahSp = collect($listHariKerja)
+            ->filter(fn($tgl) => $tgl['tanggal'] > ($tanggalSpTerakhir ?? '1900-01-01') && $tgl['tanggal'] <= $hariIni)
+            ->pluck('tanggal')
+            ->values();
 
+        if ($hariKerjaSetelahSp->count() < 10) {
+            // Belum cukup 10 hari kerja sejak SP terakhir, tidak layak
+            return false;
+        }
+
+        // 4. Ambil presensi pegawai di tanggal tersebut
         $presensi = Presensi::where('user_id', $pegawai->user_id)
-            ->whereBetween('waktu_presensi', [$hariKerjaBulanIni->first(), $hariIni])
+            ->whereBetween('waktu_presensi', [$hariKerjaSetelahSp->first(), $hariKerjaSetelahSp->last()])
             ->pluck('waktu_presensi')
             ->map(fn($tgl) => \Carbon\Carbon::parse($tgl)->toDateString());
 
-        $alphaDates = $hariKerjaBulanIni->filter(fn($tgl) => !$presensi->contains($tgl))->values();
+        // 5. Cek 10 hari kerja pertama setelah SP terakhir
+        $sepuluhHariKerja = $hariKerjaSetelahSp->take(10);
+        $alphaSemua = $sepuluhHariKerja->every(fn($tgl) => !$presensi->contains($tgl));
 
-        $streak = 1;
-        for ($i = 1; $i < $alphaDates->count(); $i++) {
-            $prev = \Carbon\Carbon::parse($alphaDates[$i - 1]);
-            $curr = \Carbon\Carbon::parse($alphaDates[$i]);
-
-            if ($prev->diffInWeekdays($curr) === 1) {
-                $streak++;
-                if ($streak === 10) break;
-            } else {
-                $streak = 1;
-            }
-        }
-
-        return $streak >= 10;
+        return $alphaSemua;
     }
 }

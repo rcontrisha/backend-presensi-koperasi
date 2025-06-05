@@ -4,6 +4,7 @@ use App\Http\Controllers\RekapIzinController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\CustomRegisterController;
 use App\Http\Controllers\AktivasiUserController;
+use App\Http\Controllers\AkunController;
 use App\Http\Controllers\RekapPresensiController;
 use App\Http\Controllers\PegawaiController;
 use App\Http\Controllers\PeringatanController;
@@ -40,6 +41,7 @@ Route::middleware(['auth', 'isAdmin'])->prefix('admin')->group(function () {
     Route::get('/rekap-presensi', [RekapPresensiController::class, 'index'])->name('admin.rekap-presensi');
     Route::get('/rekap-presensi/{user}', [RekapPresensiController::class, 'detail'])->name('admin.rekap-presensi.detail');
     Route::get('/admin/rekap-presensi/{id}/cetak-pdf', [RekapPresensiController::class, 'cetakPdf'])->name('admin.rekap-presensi.cetak-pdf');
+    Route::get('/admin/rekap-presensi/print/{id}', [RekapPresensiController::class, 'printView'])->name('admin.rekap-presensi.print-view');
 
     Route::get('/rekap-izin', [RekapIzinController::class, 'index'])->name('admin.rekap-izin');
     Route::get('/rekap-izin/{user}', [RekapIzinController::class, 'detail'])->name('admin.rekap-izin.detail');
@@ -54,6 +56,8 @@ Route::middleware(['auth', 'isAdmin'])->prefix('admin')->group(function () {
     Route::get('/pegawai/{id}/edit', [PegawaiController::class, 'edit'])->name('admin.pegawai.edit');
     Route::put('/pegawai/{id}', [PegawaiController::class, 'update'])->name('admin.pegawai.update');
     Route::delete('/pegawai/{id}', [PegawaiController::class, 'destroy'])->name('admin.pegawai.destroy');
+    Route::get('/akun-pegawai', [AkunController::class, 'index'])->name('admin.akun-pegawai.index');
+    Route::put('/admin/akun-pegawai/{id}/toggle-status', [AkunController::class, 'toggleStatus'])->name('admin.akun-pegawai.toggleStatus');
 
     Route::get('/peringatan', [PeringatanController::class, 'index'])->name('admin.peringatan.index');
     Route::post('/admin/peringatan/kirim/{id}', [PeringatanController::class, 'kirimSurat'])->name('admin.peringatan.kirim');

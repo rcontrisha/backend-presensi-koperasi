@@ -14,7 +14,9 @@ class RekapIzinController extends Controller
     public function index(Request $request)
     {
         // Ambil semua user
-        $users = User::where('role', 'pegawai')->get();
+        $users = User::where('role', 'pegawai')
+            ->whereHas('pegawai') // hanya ambil user yang punya relasi ke tabel pegawai
+            ->get();
 
         // Ambil semua izin, bisa difilter bulan/tahun
         $query = Izin::with('user')

@@ -22,7 +22,9 @@ class RekapPresensiController extends Controller
         $liburNasional = $this->getLiburNasional($bulanIni, $tahunIni);
 
         // Ambil semua pegawai
-        $pegawai = User::where('role', 'pegawai')->get();
+        $pegawai = User::where('role', 'pegawai')
+            ->whereHas('pegawai') // hanya ambil user yang punya relasi ke tabel pegawai
+            ->get();
 
         $rekap = $pegawai->map(function ($user) use ($bulanIni, $tahunIni, $liburNasional, $hariIni) {
             // Hitung hari kerja
@@ -119,6 +121,30 @@ class RekapPresensiController extends Controller
         $pdf = Pdf::loadView('admin.rekap-presensi.cetak-pdf', compact('user', 'presensis', 'request'));
 
         return $pdf->download('Rekap-Presensi-'.$user->name.'.pdf');
+    }
+
+    public function printView(Request $request, $id)
+    {
+        $user = User::findOrFail($id);
+
+        $query = $user->presensis()->orderBy('waktu_presensi', 'asc');
+
+        if ($request->filled('bulan') && $request->filled('tahun')) {
+            $query->whereMonth('waktu_presensi', $request->bulan)
+                ->whereYear('waktu_presensi', $request->tahun);
+        } else {
+            $query->whereMonth('waktu_presensi', Carbon::now()->month)
+                ->whereYear('waktu_presensi', Carbon::now()->year);
+        }
+
+        $presensis = $query->get();
+
+        return view('admin.rekap-presensi.cetak-pdf', [
+            'user' => $user,
+            'presensis' => $presensis,
+            'bulan' => $request->bulan,
+            'tahun' => $request->tahun
+        ]);
     }
 
     private function getLiburNasional($bulan, $tahun)

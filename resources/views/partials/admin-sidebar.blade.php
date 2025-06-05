@@ -66,7 +66,7 @@
                         <i class="bi bi-people"></i>
                         <span>Daftar Pegawai</span>
                     </a>
-                    <a href="{{ route('admin.dashboard') }}" class='sidebar-link'>
+                    <a href="{{ route('admin.akun-pegawai.index') }}" class='sidebar-link'>
                         <i class="bi bi-person-lines-fill"></i>
                         <span>Daftar Akun Pegawai</span>
                     </a>
