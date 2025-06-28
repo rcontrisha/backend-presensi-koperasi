@@ -18,7 +18,6 @@ Route::get('/user', function (Request $request) {
 
 Route::post('/register', [CustomRegisterController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
-Route::post('/save-fcm-token', [AuthController::class, 'saveFcmToken']);
 Route::post('/forgot-password', [AuthController::class, 'apiForgotPassword']);
 
 Route::middleware('auth:sanctum')->group(function () {
@@ -35,4 +34,5 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('peringatan', [PeringatanController::class, 'getSuratPeringatan']);
     Route::put('/user/update-password', [PasswordController::class, 'updatePassword']);
     Route::post('/logout', [AuthController::class, 'logout']);
+    Route::post('/save-fcm-token', [AuthController::class, 'saveFcmToken']);
 });

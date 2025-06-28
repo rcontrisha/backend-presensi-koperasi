@@ -11,6 +11,7 @@
     <link rel="stylesheet" href="{{ asset('assets/compiled/css/app-dark.css') }}">
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
 
     <!-- JS -->
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
@@ -52,8 +53,61 @@
                         </div>
                         <div class="card-body">
                             @if (session('success'))
-                            <div class="alert alert-success">{{ session('success') }}</div>
+                            <div class="alert alert-success">
+                                {{ session('success') }}
+                                @if(session('generated_password'))
+                                <br>
+                                <strong>Password untuk {{ session('generated_email') }}:</strong>
+                                <span class="badge bg-warning text-dark">{{ session('generated_password') }}</span>
+                                <br>
+                                <small>Password ini hanya tampil sekali, mohon catat atau kirim ke user.</small>
+                                @endif
+                            </div>
                             @endif
+
+                            <!-- Floating Action Button (FAB) -->
+                            <button type="button" class="btn btn-primary rounded-circle shadow position-fixed"
+                                style="bottom: 40px; right: 40px; z-index: 1050; width: 60px; height: 60px; font-size: 2rem;"
+                                data-toggle="modal" data-target="#tambahAkunModal" title="Tambah Akun Pegawai">
+                                <span class="fas fa-plus"></span>
+                            </button>
+
+                            <!-- Modal Tambah Akun Pegawai -->
+                            <div class="modal fade" id="tambahAkunModal" tabindex="-1" aria-labelledby="tambahAkunModalLabel"
+                                aria-hidden="true">
+                                <div class="modal-dialog">
+                                    <form action="{{ route('admin.akun-pegawai.store') }}" method="POST">
+                                        @csrf
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <h5 class="modal-title" id="tambahAkunModalLabel">Tambah Akun Pegawai</h5>
+                                                <button type="button" class="close" data-dismiss="modal" aria-label="Tutup">
+                                                    <span aria-hidden="true">&times;</span>
+                                                </button>
+                                            </div>
+                                            <div class="modal-body">
+                                                <div class="form-group">
+                                                    <label>Nama</label>
+                                                    <input type="text" name="name" class="form-control" placeholder="Nama"
+                                                        required>
+                                                </div>
+                                                <div class="form-group">
+                                                    <label>Email</label>
+                                                    <input type="email" name="email" class="form-control" placeholder="Email"
+                                                        required>
+                                                </div>
+                                                {{-- Hapus input password, karena password akan digenerate otomatis --}}
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="submit" class="btn btn-primary">Tambah Akun</button>
+                                                <button type="button" class="btn btn-secondary" data-dismiss="modal">Batal
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+
                             <div class="table-responsive">
                                 <table class="table table-striped" id="akunTable">
                                     <thead>

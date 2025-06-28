@@ -57,6 +57,7 @@ Route::middleware(['auth', 'isAdmin'])->prefix('admin')->group(function () {
     Route::put('/pegawai/{id}', [PegawaiController::class, 'update'])->name('admin.pegawai.update');
     Route::delete('/pegawai/{id}', [PegawaiController::class, 'destroy'])->name('admin.pegawai.destroy');
     Route::get('/akun-pegawai', [AkunController::class, 'index'])->name('admin.akun-pegawai.index');
+    Route::post('/admin/akun-pegawai', [AkunController::class, 'store'])->name('admin.akun-pegawai.store');
     Route::put('/admin/akun-pegawai/{id}/toggle-status', [AkunController::class, 'toggleStatus'])->name('admin.akun-pegawai.toggleStatus');
 
     Route::get('/peringatan', [PeringatanController::class, 'index'])->name('admin.peringatan.index');
