@@ -21,6 +21,7 @@ class Pegawai extends Model
         'tanggal_lahir',
         'jenis_kelamin',
         'pendidikan_terakhir',
+        'foto_profil'
     ];
 
     /**

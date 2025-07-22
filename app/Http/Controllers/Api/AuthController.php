@@ -17,6 +17,7 @@ class AuthController extends Controller
         $request->validate([
             'email' => 'required|string|email',
             'password' => 'required|string',
+            'remember' => 'sometimes|boolean',
         ]);
 
         if (!Auth::attempt($request->only('email', 'password'))) {
@@ -36,13 +37,28 @@ class AuthController extends Controller
         }
 
         $pegawai = $user->pegawai; // dari relasi hasOne di model User
-        $token = $user->createToken('auth_token')->plainTextToken;
+
+        // Atur masa berlaku token jika remember = true
+        $tokenName = 'auth_token';
+        $abilities = ['*'];
+        $expiresAt = null;
+
+        if ($request->boolean('remember')) {
+            // Token berlaku 30 hari
+            $expiresAt = now()->addDays(30);
+        } else {
+            // Token berlaku 1 hari (atau sesuai kebutuhan)
+            $expiresAt = now()->addMinutes(15);
+        }
+
+        $token = $user->createToken($tokenName, $abilities, $expiresAt)->plainTextToken;
 
         return response()->json([
             'access_token' => $token,
             'token_type' => 'Bearer',
             'user' => $user,
             'pegawai' => $pegawai,
+            'expires_at' => $expiresAt->toDateTimeString(),
         ]);
     }
 

@@ -31,6 +31,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/profile', [ProfileController::class, 'show']);
     Route::post('/profile', [ProfileController::class, 'store']);
     Route::put('/profile', [ProfileController::class, 'update']);
+    Route::post('/profile/photo', [ProfileController::class, 'updatePhoto']);
     Route::get('peringatan', [PeringatanController::class, 'getSuratPeringatan']);
     Route::put('/user/update-password', [PasswordController::class, 'updatePassword']);
     Route::post('/logout', [AuthController::class, 'logout']);

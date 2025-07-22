@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Pegawai;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 
 class ProfileController extends Controller
 {
@@ -108,6 +109,42 @@ class ProfileController extends Controller
         return response()->json([
             'message' => 'Profil pegawai berhasil diperbarui.',
             'data' => $pegawai,
+        ], 200);
+    }
+
+    /**
+     * Upload atau ganti foto profil pegawai
+     */
+    public function updatePhoto(Request $request)
+    {
+        $user = Auth::user();
+        $pegawai = Pegawai::where('user_id', $user->id)->first();
+
+        if (!$pegawai) {
+            return response()->json([
+                'message' => 'Profil belum ada. Gunakan endpoint store untuk membuat.',
+            ], 404);
+        }
+
+        $request->validate([
+            'foto' => 'required|image|mimes:jpeg,png,jpg|max:2048',
+        ]);
+
+        // Hapus foto lama jika ada
+        if ($pegawai->foto && Storage::disk('public')->exists($pegawai->foto)) {
+            Storage::disk('public')->delete($pegawai->foto);
+        }
+
+        // Simpan foto baru
+        $path = $request->file('foto')->store('foto_pegawai', 'public');
+        $pegawai->foto_profil = $path;
+        $pegawai->save();
+
+        return response()->json([
+            'message' => 'Foto profil berhasil diubah.',
+            'data' => [
+                'foto_url' => asset('storage/' . $path),
+            ],
         ], 200);
     }
 }
